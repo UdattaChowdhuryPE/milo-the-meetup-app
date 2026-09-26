@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Milo"
+description = "Milo is a warm, polished landing page for a consumer product that helps friends find a place or activity that works for everyone. This first version introduces Milo’s identity and explains the product without implementing rooms, accounts, AI, maps, or backend features."
+version = "1.0.0"
+id = "artifacts/milo"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19465
+
+[services.development]
+run = "pnpm --filter @workspace/milo run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/milo", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/milo/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19465"
+BASE_PATH = "/"
