@@ -45,7 +45,10 @@ export const CreateRoomResponse = zod.object({
   "roomId": zod.string().uuid(),
   "name": zod.string(),
   "role": zod.enum(['creator', 'member']),
-  "joinedAt": zod.coerce.date()
+  "joinedAt": zod.coerce.date(),
+  "originLabel": zod.string().nullable(),
+  "originSourceInsightId": zod.string().uuid().nullable(),
+  "originUpdatedAt": zod.coerce.date().nullable()
 }))
 })
 
@@ -67,7 +70,10 @@ export const GetRoomResponse = zod.object({
   "roomId": zod.string().uuid(),
   "name": zod.string(),
   "role": zod.enum(['creator', 'member']),
-  "joinedAt": zod.coerce.date()
+  "joinedAt": zod.coerce.date(),
+  "originLabel": zod.string().nullable(),
+  "originSourceInsightId": zod.string().uuid().nullable(),
+  "originUpdatedAt": zod.coerce.date().nullable()
 }))
 })
 
@@ -93,7 +99,10 @@ export const JoinRoomResponse = zod.object({
   "roomId": zod.string().uuid(),
   "name": zod.string(),
   "role": zod.enum(['creator', 'member']),
-  "joinedAt": zod.coerce.date()
+  "joinedAt": zod.coerce.date(),
+  "originLabel": zod.string().nullable(),
+  "originSourceInsightId": zod.string().uuid().nullable(),
+  "originUpdatedAt": zod.coerce.date().nullable()
 })
 
 
@@ -202,6 +211,113 @@ export const RetryRoomUnderstandingResponse = zod.object({
 })),
   "analysisStatus": zod.enum(['idle', 'pending', 'processing', 'failed']),
   "updatedAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Confirm, edit or clear your own approximate starting area
+ */
+export const UpdateParticipantLocationParams = zod.object({
+  "id": zod.coerce.string().uuid(),
+  "participantId": zod.coerce.string().uuid()
+})
+
+export const UpdateParticipantLocationHeader = zod.object({
+  "X-Milo-Browser-Identity": zod.string().uuid()
+})
+
+export const updateParticipantLocationBodyOriginLabelMax = 100;
+
+
+
+export const UpdateParticipantLocationBody = zod.object({
+  "originLabel": zod.string().max(updateParticipantLocationBodyOriginLabelMax).nullable(),
+  "sourceInsightId": zod.string().uuid().nullish()
+})
+
+export const UpdateParticipantLocationResponse = zod.object({
+  "id": zod.string().uuid(),
+  "roomId": zod.string().uuid(),
+  "name": zod.string(),
+  "role": zod.enum(['creator', 'member']),
+  "joinedAt": zod.coerce.date(),
+  "originLabel": zod.string().nullable(),
+  "originSourceInsightId": zod.string().uuid().nullable(),
+  "originUpdatedAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Get search readiness and the latest restaurant suggestions
+ */
+export const GetRoomSuggestionsParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetRoomSuggestionsHeader = zod.object({
+  "X-Milo-Browser-Identity": zod.string().uuid()
+})
+
+export const GetRoomSuggestionsResponse = zod.object({
+  "status": zod.enum(['idle', 'pending', 'processing', 'ready', 'failed']),
+  "runId": zod.string().uuid().nullable(),
+  "stale": zod.boolean(),
+  "errorCode": zod.string().nullable(),
+  "requestedAt": zod.coerce.date().nullable(),
+  "completedAt": zod.coerce.date().nullable(),
+  "canSearch": zod.boolean(),
+  "readinessMessage": zod.string().nullable(),
+  "providerAvailable": zod.boolean(),
+  "missingParticipantNames": zod.array(zod.string()),
+  "suggestions": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "placeId": zod.string(),
+  "name": zod.string(),
+  "address": zod.string().nullable(),
+  "mapsUrl": zod.string().nullable(),
+  "category": zod.string().nullable(),
+  "priceLevel": zod.string().nullable(),
+  "rating": zod.number().nullable(),
+  "openingLabel": zod.string().nullable(),
+  "fit": zod.enum(['verified', 'partial', 'tradeoff']),
+  "reasons": zod.array(zod.object({
+  "insightId": zod.string().uuid().nullable(),
+  "label": zod.string(),
+  "verdict": zod.enum(['met', 'failed', 'unknown', 'not_applicable']),
+  "strength": zod.enum(['hard_constraint', 'strong_preference', 'preference'])
+})),
+  "travel": zod.array(zod.object({
+  "participantId": zod.string().uuid(),
+  "participantName": zod.string(),
+  "minutes": zod.number().int().nullable()
+})),
+  "travelCoverage": zod.string(),
+  "attributions": zod.array(zod.object({
+  "provider": zod.string(),
+  "providerUri": zod.string().nullable()
+}))
+}))
+})
+
+
+/**
+ * @summary Explicitly request a bounded restaurant search
+ */
+export const SearchRoomSuggestionsParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const SearchRoomSuggestionsHeader = zod.object({
+  "X-Milo-Browser-Identity": zod.string().uuid()
+})
+
+export const SearchRoomSuggestionsBody = zod.object({
+  "participantId": zod.string().uuid()
+})
+
+export const SearchRoomSuggestionsResponse = zod.object({
+  "runId": zod.string().uuid(),
+  "status": zod.enum(['pending', 'processing'])
 })
 
 

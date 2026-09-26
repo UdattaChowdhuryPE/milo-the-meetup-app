@@ -13,6 +13,10 @@ export const participantsTable = pgTable(
     browserIdentity: uuid("browser_identity"),
     name: text("name").notNull(),
     role: participantRole("role").notNull(),
+    originLabel: text("origin_label"),
+    originSourceInsightId: uuid("origin_source_insight_id"),
+    originSourceInsightUpdatedAt: timestamp("origin_source_insight_updated_at", { withTimezone: true }),
+    originUpdatedAt: timestamp("origin_updated_at", { withTimezone: true }),
     joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

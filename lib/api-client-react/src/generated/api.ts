@@ -26,9 +26,13 @@ import type {
   MessageInput,
   Participant,
   ParticipantInput,
+  ParticipantLocationUpdate,
   Room,
   RoomInput,
-  RoomUnderstanding
+  RoomSuggestions,
+  RoomUnderstanding,
+  SuggestionSearchAccepted,
+  SuggestionSearchInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -705,5 +709,262 @@ export const useRetryRoomUnderstanding = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getRetryRoomUnderstandingMutationOptions(options));
+    }
+
+export const getUpdateParticipantLocationUrl = (id: string,
+    participantId: string,) => {
+
+
+
+
+  return `/api/rooms/${id}/participants/${participantId}/location`
+}
+
+/**
+ * @summary Confirm, edit or clear your own approximate starting area
+ */
+export const updateParticipantLocation = async (id: string,
+    participantId: string,
+    participantLocationUpdate: ParticipantLocationUpdate, options?: Parameters<typeof customFetch>[1]): Promise<Participant> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Participant>(getUpdateParticipantLocationUrl(id,participantId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(participantLocationUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateParticipantLocationMutationKey = () => ['updateParticipantLocation'] as const;
+
+export const getUpdateParticipantLocationMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateParticipantLocation>>, TError,UpdateParticipantLocationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateParticipantLocation>>, TError,UpdateParticipantLocationMutationVariables, TContext> => {
+
+const mutationKey = getUpdateParticipantLocationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateParticipantLocation>>, UpdateParticipantLocationMutationVariables> = (props) => {
+          const {id,participantId,data} = props ?? {};
+
+          return  updateParticipantLocation(id,participantId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateParticipantLocationMutationResult = NonNullable<Awaited<ReturnType<typeof updateParticipantLocation>>>
+    export type UpdateParticipantLocationMutationBody = BodyType<ParticipantLocationUpdate>
+    export type UpdateParticipantLocationMutationError = ErrorType<ErrorResponse>
+    export type UpdateParticipantLocationMutationVariables = {id: string;participantId: string;data: BodyType<ParticipantLocationUpdate>}
+
+    /**
+ * @summary Confirm, edit or clear your own approximate starting area
+ */
+export const useUpdateParticipantLocation = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateParticipantLocation>>, TError,UpdateParticipantLocationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateParticipantLocation>>,
+        TError,
+        UpdateParticipantLocationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateParticipantLocationMutationOptions(options));
+    }
+
+export const getGetRoomSuggestionsUrl = (id: string,) => {
+
+
+
+
+  return `/api/rooms/${id}/suggestions`
+}
+
+/**
+ * @summary Get search readiness and the latest restaurant suggestions
+ */
+export const getRoomSuggestions = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<RoomSuggestions> => {
+
+  return customFetch<RoomSuggestions>(getGetRoomSuggestionsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRoomSuggestionsQueryKey = (id: string,) => {
+    return [
+    `/api/rooms/${id}/suggestions`
+    ] as const;
+    }
+
+
+export const getGetRoomSuggestionsQueryOptions = <TData = Awaited<ReturnType<typeof getRoomSuggestions>>, TError = ErrorType<ErrorResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRoomSuggestions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRoomSuggestionsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRoomSuggestions>>> = ({ signal }) => getRoomSuggestions(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRoomSuggestions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRoomSuggestionsQueryResult = NonNullable<Awaited<ReturnType<typeof getRoomSuggestions>>>
+export type GetRoomSuggestionsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get search readiness and the latest restaurant suggestions
+ */
+
+export function useGetRoomSuggestions<TData = Awaited<ReturnType<typeof getRoomSuggestions>>, TError = ErrorType<ErrorResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRoomSuggestions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRoomSuggestionsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSearchRoomSuggestionsUrl = (id: string,) => {
+
+
+
+
+  return `/api/rooms/${id}/suggestions/search`
+}
+
+/**
+ * @summary Explicitly request a bounded restaurant search
+ */
+export const searchRoomSuggestions = async (id: string,
+    suggestionSearchInput: SuggestionSearchInput, options?: Parameters<typeof customFetch>[1]): Promise<SuggestionSearchAccepted> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SuggestionSearchAccepted>(getSearchRoomSuggestionsUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(suggestionSearchInput)
+  }
+);}
+
+
+
+
+
+export const getSearchRoomSuggestionsMutationKey = () => ['searchRoomSuggestions'] as const;
+
+export const getSearchRoomSuggestionsMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof searchRoomSuggestions>>, TError,SearchRoomSuggestionsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof searchRoomSuggestions>>, TError,SearchRoomSuggestionsMutationVariables, TContext> => {
+
+const mutationKey = getSearchRoomSuggestionsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof searchRoomSuggestions>>, SearchRoomSuggestionsMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  searchRoomSuggestions(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SearchRoomSuggestionsMutationResult = NonNullable<Awaited<ReturnType<typeof searchRoomSuggestions>>>
+    export type SearchRoomSuggestionsMutationBody = BodyType<SuggestionSearchInput>
+    export type SearchRoomSuggestionsMutationError = ErrorType<ErrorResponse>
+    export type SearchRoomSuggestionsMutationVariables = {id: string;data: BodyType<SuggestionSearchInput>}
+
+    /**
+ * @summary Explicitly request a bounded restaurant search
+ */
+export const useSearchRoomSuggestions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof searchRoomSuggestions>>, TError,SearchRoomSuggestionsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof searchRoomSuggestions>>,
+        TError,
+        SearchRoomSuggestionsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSearchRoomSuggestionsMutationOptions(options));
     }
 

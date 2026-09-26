@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import '../understanding.css';
 
@@ -19,6 +19,7 @@ type Participant = { id: string; name: string };
 type SourceMessage = { id: string; senderName: string; content: string };
 
 type RoomUnderstandingProps = {
+  focusInsightId?: string | null;
   insights: Insight[];
   participants: Participant[];
   messages: SourceMessage[] | undefined;
@@ -44,6 +45,7 @@ function updatedLabel(updatedAt: string | null) {
 }
 
 function RoomUnderstanding({
+  focusInsightId,
   insights,
   participants,
   messages,
@@ -55,6 +57,11 @@ function RoomUnderstanding({
   isRetrying,
 }: RoomUnderstandingProps) {
   const [openInsightId, setOpenInsightId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!focusInsightId) return;
+    setOpenInsightId(focusInsightId);
+    requestAnimationFrame(() => document.getElementById(`understanding-insight-${focusInsightId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+  }, [focusInsightId]);
   // Superseded notes have been replaced; showing them as current would misrepresent the group.
   const currentInsights = insights.filter((insight) => insight.status !== 'superseded');
   const hasInsights = currentInsights.length > 0;
@@ -118,6 +125,7 @@ function RoomUnderstanding({
 
               return (
                 <li
+                   id={`understanding-insight-${insight.id}`}
                   className="workspace-understanding-item"
                   key={`${insight.id}:${insight.value}:${insight.status}:${insight.scope}:${insight.participantId}`}
                   data-testid={`item-understanding-${insight.id}`}

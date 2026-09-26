@@ -3,13 +3,14 @@ import { ArrowLeft, ArrowRight, Check, Copy, Link2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'wouter';
 import {
-  getGetRoomMessagesQueryKey, getGetRoomQueryKey, getGetRoomUnderstandingQueryKey,
+  getGetRoomMessagesQueryKey, getGetRoomQueryKey, getGetRoomSuggestionsQueryKey, getGetRoomUnderstandingQueryKey,
   useGetRoom, useGetRoomMessages, useGetRoomUnderstanding, useJoinRoom, useRetryRoomUnderstanding,
   type Room,
 } from '@workspace/api-client-react';
 import { readRoomMembership, saveRoomMembership } from '@/lib/room-membership';
 import RoomConversation from '@/components/room-conversation';
 import RoomUnderstanding from '@/components/room-understanding';
+import RoomSuggestions from '@/components/room-suggestions';
 import '../rooms.css';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -97,6 +98,8 @@ function RoomPage() {
   const [joinName, setJoinName] = useState('');
   const [joinError, setJoinError] = useState<string | null>(null);
   const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'manual'>('idle');
+  const [focusInsightId, setFocusInsightId] = useState<string | null>(null);
+  const lastSuggestionsContext = useRef<string | null>(null);
   const urlInputRef = useRef<HTMLInputElement>(null);
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   const shareUrl = typeof window === 'undefined' ? '' : `${window.location.origin}${base}/room/${encodeURIComponent(id)}`;
@@ -111,7 +114,21 @@ function RoomPage() {
     setMembership({ roomId: id, value: readRoomMembership(id) });
     setJoinName('');
     setJoinError(null);
+    lastSuggestionsContext.current = null;
   }, [id]);
+
+  // Refresh readiness/staleness when the group or Milo's understanding changes,
+  // without polling a completed restaurant search or requesting new provider details.
+  const suggestionsContext = room
+    ? `${id}|${understanding?.updatedAt ?? ''}|${room.participants.map((person) => `${person.id}:${person.originUpdatedAt ?? ''}`).join('|')}`
+    : null;
+  useEffect(() => {
+    if (!suggestionsContext) return;
+    if (lastSuggestionsContext.current && lastSuggestionsContext.current !== suggestionsContext) {
+      void queryClient.invalidateQueries({ queryKey: getGetRoomSuggestionsQueryKey(id) });
+    }
+    lastSuggestionsContext.current = suggestionsContext;
+  }, [suggestionsContext, id, queryClient]);
 
   async function shareRoom() {
     try {
@@ -229,6 +246,7 @@ function RoomPage() {
                 <span className="workspace-avatar" aria-hidden="true">{person.name.trim().charAt(0).toUpperCase()}</span>
                 <span data-testid={`text-participant-name-${person.id}`}>{person.name}</span>
                 {person.role === 'creator' && <span className="workspace-person-role">Creator</span>}
+                 {person.originLabel && <span className="workspace-person-origin">· from {person.originLabel}</span>}
               </div>
             ))}
           </div>
@@ -252,6 +270,7 @@ function RoomPage() {
           }} />
           <div className="workspace-side">
             <RoomUnderstanding
+              focusInsightId={focusInsightId}
               insights={understanding?.insights ?? []}
               participants={room.participants}
               messages={sourceMessages}
@@ -266,14 +285,16 @@ function RoomPage() {
                 });
               }}
             />
-            <section className="workspace-panel workspace-panel-suggestions" aria-labelledby="suggestions-heading" data-testid="section-suggestions">
-              <div className="workspace-panel-top"><span className="workspace-panel-label">03 / SUGGESTIONS</span></div>
-              <div className="workspace-panel-body">
-                <h2 id="suggestions-heading">The good options come later.</h2>
-                <p>No suggestions yet. When this part of Milo is ready, options that consider everyone will appear here.</p>
-              </div>
-              <div className="workspace-panel-bottom workspace-footnote">No options yet</div>
-            </section>
+            <RoomSuggestions
+              roomId={id}
+              participant={currentParticipant}
+              browserIdentity={activeMembership?.browserIdentity}
+              insights={understanding?.insights ?? []}
+              onShowInsight={(insightId) => {
+                setFocusInsightId(null);
+                requestAnimationFrame(() => setFocusInsightId(insightId));
+              }}
+            />
           </div>
         </div>
       </div>

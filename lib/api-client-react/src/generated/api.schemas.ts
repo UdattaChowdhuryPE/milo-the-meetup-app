@@ -48,6 +48,141 @@ export interface Participant {
   name: string;
   role: ParticipantRole;
   joinedAt: string;
+  /** @nullable */
+  originLabel: string | null;
+  /** @nullable */
+  originSourceInsightId: string | null;
+  /** @nullable */
+  originUpdatedAt: string | null;
+}
+
+export interface ParticipantLocationUpdate {
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  originLabel: string | null;
+  /** @nullable */
+  sourceInsightId?: string | null;
+}
+
+export interface SuggestionSearchInput {
+  participantId: string;
+}
+
+export type SuggestionSearchAcceptedStatus = typeof SuggestionSearchAcceptedStatus[keyof typeof SuggestionSearchAcceptedStatus];
+
+
+export const SuggestionSearchAcceptedStatus = {
+  pending: 'pending',
+  processing: 'processing',
+} as const;
+
+export interface SuggestionSearchAccepted {
+  runId: string;
+  status: SuggestionSearchAcceptedStatus;
+}
+
+export type SuggestionReasonVerdict = typeof SuggestionReasonVerdict[keyof typeof SuggestionReasonVerdict];
+
+
+export const SuggestionReasonVerdict = {
+  met: 'met',
+  failed: 'failed',
+  unknown: 'unknown',
+  not_applicable: 'not_applicable',
+} as const;
+
+export type SuggestionReasonStrength = typeof SuggestionReasonStrength[keyof typeof SuggestionReasonStrength];
+
+
+export const SuggestionReasonStrength = {
+  hard_constraint: 'hard_constraint',
+  strong_preference: 'strong_preference',
+  preference: 'preference',
+} as const;
+
+export interface SuggestionReason {
+  /** @nullable */
+  insightId: string | null;
+  label: string;
+  verdict: SuggestionReasonVerdict;
+  strength: SuggestionReasonStrength;
+}
+
+export interface SuggestionTravel {
+  participantId: string;
+  participantName: string;
+  /** @nullable */
+  minutes: number | null;
+}
+
+export type RestaurantSuggestionFit = typeof RestaurantSuggestionFit[keyof typeof RestaurantSuggestionFit];
+
+
+export const RestaurantSuggestionFit = {
+  verified: 'verified',
+  partial: 'partial',
+  tradeoff: 'tradeoff',
+} as const;
+
+export type RestaurantSuggestionAttributionsItem = {
+  provider: string;
+  /** @nullable */
+  providerUri: string | null;
+};
+
+export interface RestaurantSuggestion {
+  id: string;
+  placeId: string;
+  name: string;
+  /** @nullable */
+  address: string | null;
+  /** @nullable */
+  mapsUrl: string | null;
+  /** @nullable */
+  category: string | null;
+  /** @nullable */
+  priceLevel: string | null;
+  /** @nullable */
+  rating: number | null;
+  /** @nullable */
+  openingLabel: string | null;
+  fit: RestaurantSuggestionFit;
+  reasons: SuggestionReason[];
+  travel: SuggestionTravel[];
+  travelCoverage: string;
+  attributions: RestaurantSuggestionAttributionsItem[];
+}
+
+export type RoomSuggestionsStatus = typeof RoomSuggestionsStatus[keyof typeof RoomSuggestionsStatus];
+
+
+export const RoomSuggestionsStatus = {
+  idle: 'idle',
+  pending: 'pending',
+  processing: 'processing',
+  ready: 'ready',
+  failed: 'failed',
+} as const;
+
+export interface RoomSuggestions {
+  status: RoomSuggestionsStatus;
+  /** @nullable */
+  runId: string | null;
+  stale: boolean;
+  /** @nullable */
+  errorCode: string | null;
+  /** @nullable */
+  requestedAt: string | null;
+  /** @nullable */
+  completedAt: string | null;
+  canSearch: boolean;
+  /** @nullable */
+  readinessMessage: string | null;
+  providerAvailable: boolean;
+  missingParticipantNames: string[];
+  suggestions: RestaurantSuggestion[];
 }
 
 export interface MessageInput {

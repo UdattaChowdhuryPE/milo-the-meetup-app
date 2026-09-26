@@ -264,6 +264,145 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /rooms/{id}/participants/{participantId}/location:
+    patch:
+      operationId: updateParticipantLocation
+      tags: [rooms]
+      summary: Confirm, edit or clear your own approximate starting area
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: participantId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: X-Milo-Browser-Identity
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParticipantLocationUpdate"
+      responses:
+        "200":
+          description: Updated participant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Participant"
+        "400":
+          description: Invalid area or insight
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Browser identity does not own this participant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Room or participant not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /rooms/{id}/suggestions:
+    get:
+      operationId: getRoomSuggestions
+      tags: [rooms]
+      summary: Get search readiness and the latest restaurant suggestions
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: X-Milo-Browser-Identity
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Latest suggestion run and freshly fetched venue facts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomSuggestions"
+        "400":
+          description: Invalid room ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Join the room to view suggestions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Room not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /rooms/{id}/suggestions/search:
+    post:
+      operationId: searchRoomSuggestions
+      tags: [rooms]
+      summary: Explicitly request a bounded restaurant search
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: X-Milo-Browser-Identity
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SuggestionSearchInput"
+      responses:
+        "202":
+          description: Search queued or already in progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuggestionSearchAccepted"
+        "400":
+          description: Missing cuisine or geographic context
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Browser identity does not belong to the room
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Room or participant not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Search cooldown or daily limit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -325,12 +464,108 @@ components:
         joinedAt:
           type: string
           format: date-time
+        originLabel:
+          type: ["string", "null"]
+        originSourceInsightId:
+          type: ["string", "null"]
+          format: uuid
+        originUpdatedAt:
+          type: ["string", "null"]
+          format: date-time
       required:
         - id
         - roomId
         - name
         - role
         - joinedAt
+        - originLabel
+        - originSourceInsightId
+        - originUpdatedAt
+    ParticipantLocationUpdate:
+      type: object
+      additionalProperties: false
+      required: [originLabel]
+      properties:
+        originLabel: { type: ["string", "null"], maxLength: 100 }
+        sourceInsightId: { type: ["string", "null"], format: uuid }
+    SuggestionSearchInput:
+      type: object
+      additionalProperties: false
+      required: [participantId]
+      properties:
+        participantId: { type: string, format: uuid }
+    SuggestionSearchAccepted:
+      type: object
+      required: [runId, status]
+      properties:
+        runId: { type: string, format: uuid }
+        status: { type: string, enum: [pending, processing] }
+    SuggestionReason:
+      type: object
+      required: [insightId, label, verdict, strength]
+      properties:
+        insightId: { type: ["string", "null"], format: uuid }
+        label: { type: string }
+        verdict: { type: string, enum: [met, failed, unknown, not_applicable] }
+        strength: { type: string, enum: [hard_constraint, strong_preference, preference] }
+    SuggestionTravel:
+      type: object
+      required: [participantId, participantName, minutes]
+      properties:
+        participantId: { type: string, format: uuid }
+        participantName: { type: string }
+        minutes: { type: ["integer", "null"] }
+    RestaurantSuggestion:
+      type: object
+      required: [id, placeId, name, address, mapsUrl, category, priceLevel, rating, openingLabel, fit, reasons, travel, travelCoverage, attributions]
+      properties:
+        id: { type: string, format: uuid }
+        placeId: { type: string }
+        name: { type: string }
+        address: { type: ["string", "null"] }
+        mapsUrl: { type: ["string", "null"] }
+        category: { type: ["string", "null"] }
+        priceLevel: { type: ["string", "null"] }
+        rating: { type: ["number", "null"] }
+        openingLabel: { type: ["string", "null"] }
+        fit: { type: string, enum: [verified, partial, tradeoff] }
+        reasons:
+          type: array
+          items:
+            $ref: "#/components/schemas/SuggestionReason"
+        travel:
+          type: array
+          items:
+            $ref: "#/components/schemas/SuggestionTravel"
+        travelCoverage: { type: string }
+        attributions:
+          type: array
+          items:
+            type: object
+            required: [provider, providerUri]
+            properties:
+              provider: { type: string }
+              providerUri: { type: ["string", "null"] }
+    RoomSuggestions:
+      type: object
+      required: [status, runId, stale, errorCode, requestedAt, completedAt, canSearch, readinessMessage, providerAvailable, missingParticipantNames, suggestions]
+      properties:
+        status: { type: string, enum: [idle, pending, processing, ready, failed] }
+        runId: { type: ["string", "null"], format: uuid }
+        stale: { type: boolean }
+        errorCode: { type: ["string", "null"] }
+        requestedAt: { type: ["string", "null"], format: date-time }
+        completedAt: { type: ["string", "null"], format: date-time }
+        canSearch: { type: boolean }
+        readinessMessage: { type: ["string", "null"] }
+        providerAvailable: { type: boolean }
+        missingParticipantNames:
+          type: array
+          items: { type: string }
+        suggestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/RestaurantSuggestion"
     MessageInput:
       type: object
       additionalProperties: false

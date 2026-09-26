@@ -13,4 +13,10 @@ export interface Participant {
   name: string;
   role: ParticipantRole;
   joinedAt: Date;
+  /** @nullable */
+  originLabel: string | null;
+  /** @nullable */
+  originSourceInsightId: string | null;
+  /** @nullable */
+  originUpdatedAt: Date | null;
 }
