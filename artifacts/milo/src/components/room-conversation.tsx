@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import {
   getGetRoomMessagesQueryKey,
+  getGetRoomUnderstandingQueryKey,
   useGetRoomMessages,
   useSendRoomMessage,
   type Message,
@@ -63,6 +64,7 @@ function RoomConversation({ roomId, participant, browserIdentity, onJoinAgain }:
         });
         form.reset({ content: '' });
         void queryClient.invalidateQueries({ queryKey: getGetRoomMessagesQueryKey(roomId) });
+        void queryClient.invalidateQueries({ queryKey: getGetRoomUnderstandingQueryKey(roomId) });
       },
       onError: (error) => {
         const status = (error as { status?: number }).status;

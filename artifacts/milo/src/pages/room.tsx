@@ -2,9 +2,14 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ArrowLeft, ArrowRight, Check, Copy, Link2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'wouter';
-import { getGetRoomQueryKey, useGetRoom, useJoinRoom, type Room } from '@workspace/api-client-react';
+import {
+  getGetRoomMessagesQueryKey, getGetRoomQueryKey, getGetRoomUnderstandingQueryKey,
+  useGetRoom, useGetRoomMessages, useGetRoomUnderstanding, useJoinRoom, useRetryRoomUnderstanding,
+  type Room,
+} from '@workspace/api-client-react';
 import { readRoomMembership, saveRoomMembership } from '@/lib/room-membership';
 import RoomConversation from '@/components/room-conversation';
+import RoomUnderstanding from '@/components/room-understanding';
 import '../rooms.css';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -70,6 +75,24 @@ function RoomPage() {
   });
   const queryClient = useQueryClient();
   const joinRoom = useJoinRoom();
+  const {
+    data: understanding, isLoading: isUnderstandingLoading,
+    isError: understandingLoadError,
+  } = useGetRoomUnderstanding(id, {
+    query: {
+      enabled: valid,
+      queryKey: getGetRoomUnderstandingQueryKey(id),
+      retry: false,
+      refetchInterval: (query) => {
+        const status = query.state.data?.analysisStatus;
+        return status === 'pending' || status === 'processing' ? 3000 : 10000;
+      },
+    },
+  });
+  const { data: sourceMessages } = useGetRoomMessages(id, {
+    query: { enabled: valid, queryKey: getGetRoomMessagesQueryKey(id), retry: false },
+  });
+  const retryUnderstanding = useRetryRoomUnderstanding();
   const [membership, setMembership] = useState(() => ({ roomId: id, value: readRoomMembership(id) }));
   const [joinName, setJoinName] = useState('');
   const [joinError, setJoinError] = useState<string | null>(null);
@@ -228,14 +251,21 @@ function RoomPage() {
             requestAnimationFrame(() => document.getElementById('join-name')?.focus());
           }} />
           <div className="workspace-side">
-            <section className="workspace-panel workspace-panel-understanding" aria-labelledby="understanding-heading" data-testid="section-understanding">
-              <div className="workspace-panel-top"><span className="workspace-panel-label">02 / MILO’S UNDERSTANDING</span></div>
-              <div className="workspace-panel-body">
-                <h2 id="understanding-heading">A clearer picture, in time.</h2>
-                <p>Milo doesn’t know what the group wants yet. This space will eventually bring everyone’s wants into focus.</p>
-              </div>
-              <div className="workspace-panel-bottom workspace-footnote">Nothing to understand yet</div>
-            </section>
+            <RoomUnderstanding
+              insights={understanding?.insights ?? []}
+              participants={room.participants}
+              messages={sourceMessages}
+              analysisStatus={understanding?.analysisStatus ?? 'idle'}
+              updatedAt={understanding?.updatedAt ?? null}
+              isLoading={isUnderstandingLoading}
+              loadError={understandingLoadError}
+              isRetrying={retryUnderstanding.isPending}
+              onRetry={() => {
+                retryUnderstanding.mutate({ id }, {
+                  onSuccess: () => { void queryClient.invalidateQueries({ queryKey: getGetRoomUnderstandingQueryKey(id) }); },
+                });
+              }}
+            />
             <section className="workspace-panel workspace-panel-suggestions" aria-labelledby="suggestions-heading" data-testid="section-suggestions">
               <div className="workspace-panel-top"><span className="workspace-panel-label">03 / SUGGESTIONS</span></div>
               <div className="workspace-panel-body">

@@ -68,6 +68,88 @@ export interface Message {
   createdAt: string;
 }
 
+/**
+ * @nullable
+ */
+export type UnderstandingInsightNormalizedValue = {
+  /** @nullable */
+  amount: number | null;
+  /** @nullable */
+  unit: string | null;
+  /** @nullable */
+  comparison: string | null;
+} | null;
+
+export type UnderstandingInsightScope = typeof UnderstandingInsightScope[keyof typeof UnderstandingInsightScope];
+
+
+export const UnderstandingInsightScope = {
+  group: 'group',
+  participant: 'participant',
+} as const;
+
+export type UnderstandingInsightStrength = typeof UnderstandingInsightStrength[keyof typeof UnderstandingInsightStrength];
+
+
+export const UnderstandingInsightStrength = {
+  hard_constraint: 'hard_constraint',
+  strong_preference: 'strong_preference',
+  preference: 'preference',
+} as const;
+
+export type UnderstandingInsightConfidence = typeof UnderstandingInsightConfidence[keyof typeof UnderstandingInsightConfidence];
+
+
+export const UnderstandingInsightConfidence = {
+  high: 'high',
+  medium: 'medium',
+  low: 'low',
+} as const;
+
+export type UnderstandingInsightStatus = typeof UnderstandingInsightStatus[keyof typeof UnderstandingInsightStatus];
+
+
+export const UnderstandingInsightStatus = {
+  active: 'active',
+  superseded: 'superseded',
+  conflicting: 'conflicting',
+  uncertain: 'uncertain',
+} as const;
+
+export interface UnderstandingInsight {
+  id: string;
+  kind: string;
+  value: string;
+  /** @nullable */
+  normalizedValue: UnderstandingInsightNormalizedValue;
+  scope: UnderstandingInsightScope;
+  /** @nullable */
+  participantId: string | null;
+  strength: UnderstandingInsightStrength;
+  confidence: UnderstandingInsightConfidence;
+  status: UnderstandingInsightStatus;
+  sourceMessageIds: string[];
+  /** @nullable */
+  supersedesInsightId: string | null;
+}
+
+export type RoomUnderstandingAnalysisStatus = typeof RoomUnderstandingAnalysisStatus[keyof typeof RoomUnderstandingAnalysisStatus];
+
+
+export const RoomUnderstandingAnalysisStatus = {
+  idle: 'idle',
+  pending: 'pending',
+  processing: 'processing',
+  failed: 'failed',
+} as const;
+
+export interface RoomUnderstanding {
+  insights: UnderstandingInsight[];
+  analysisStatus: RoomUnderstandingAnalysisStatus;
+  /** @nullable */
+  updatedAt: string | null;
+}
+
 export interface Room {
   id: string;
   name: string;

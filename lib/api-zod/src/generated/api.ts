@@ -145,3 +145,63 @@ export const SendRoomMessageResponse = zod.object({
 })
 
 
+/**
+ * @summary Get saved understanding of a room's conversation
+ */
+export const GetRoomUnderstandingParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetRoomUnderstandingResponse = zod.object({
+  "insights": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "kind": zod.string(),
+  "value": zod.string(),
+  "normalizedValue": zod.object({
+  "amount": zod.number().nullable(),
+  "unit": zod.string().nullable(),
+  "comparison": zod.string().nullable()
+}).nullable(),
+  "scope": zod.enum(['group', 'participant']),
+  "participantId": zod.string().uuid().nullable(),
+  "strength": zod.enum(['hard_constraint', 'strong_preference', 'preference']),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "status": zod.enum(['active', 'superseded', 'conflicting', 'uncertain']),
+  "sourceMessageIds": zod.array(zod.string().uuid()),
+  "supersedesInsightId": zod.string().uuid().nullable()
+})),
+  "analysisStatus": zod.enum(['idle', 'pending', 'processing', 'failed']),
+  "updatedAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Request a retry for the room's understanding
+ */
+export const RetryRoomUnderstandingParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const RetryRoomUnderstandingResponse = zod.object({
+  "insights": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "kind": zod.string(),
+  "value": zod.string(),
+  "normalizedValue": zod.object({
+  "amount": zod.number().nullable(),
+  "unit": zod.string().nullable(),
+  "comparison": zod.string().nullable()
+}).nullable(),
+  "scope": zod.enum(['group', 'participant']),
+  "participantId": zod.string().uuid().nullable(),
+  "strength": zod.enum(['hard_constraint', 'strong_preference', 'preference']),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "status": zod.enum(['active', 'superseded', 'conflicting', 'uncertain']),
+  "sourceMessageIds": zod.array(zod.string().uuid()),
+  "supersedesInsightId": zod.string().uuid().nullable()
+})),
+  "analysisStatus": zod.enum(['idle', 'pending', 'processing', 'failed']),
+  "updatedAt": zod.coerce.date().nullable()
+})
+
+

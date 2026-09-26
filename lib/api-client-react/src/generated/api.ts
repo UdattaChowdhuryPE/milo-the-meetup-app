@@ -27,7 +27,8 @@ import type {
   Participant,
   ParticipantInput,
   Room,
-  RoomInput
+  RoomInput,
+  RoomUnderstanding
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -553,5 +554,156 @@ export const useSendRoomMessage = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getSendRoomMessageMutationOptions(options));
+    }
+
+export const getGetRoomUnderstandingUrl = (id: string,) => {
+
+
+
+
+  return `/api/rooms/${id}/understanding`
+}
+
+/**
+ * @summary Get saved understanding of a room's conversation
+ */
+export const getRoomUnderstanding = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<RoomUnderstanding> => {
+
+  return customFetch<RoomUnderstanding>(getGetRoomUnderstandingUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRoomUnderstandingQueryKey = (id: string,) => {
+    return [
+    `/api/rooms/${id}/understanding`
+    ] as const;
+    }
+
+
+export const getGetRoomUnderstandingQueryOptions = <TData = Awaited<ReturnType<typeof getRoomUnderstanding>>, TError = ErrorType<ErrorResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRoomUnderstanding>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRoomUnderstandingQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRoomUnderstanding>>> = ({ signal }) => getRoomUnderstanding(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRoomUnderstanding>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRoomUnderstandingQueryResult = NonNullable<Awaited<ReturnType<typeof getRoomUnderstanding>>>
+export type GetRoomUnderstandingQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get saved understanding of a room's conversation
+ */
+
+export function useGetRoomUnderstanding<TData = Awaited<ReturnType<typeof getRoomUnderstanding>>, TError = ErrorType<ErrorResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRoomUnderstanding>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRoomUnderstandingQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRetryRoomUnderstandingUrl = (id: string,) => {
+
+
+
+
+  return `/api/rooms/${id}/understanding/retry`
+}
+
+/**
+ * @summary Request a retry for the room's understanding
+ */
+export const retryRoomUnderstanding = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<RoomUnderstanding> => {
+
+  return customFetch<RoomUnderstanding>(getRetryRoomUnderstandingUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRetryRoomUnderstandingMutationKey = () => ['retryRoomUnderstanding'] as const;
+
+export const getRetryRoomUnderstandingMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof retryRoomUnderstanding>>, TError,RetryRoomUnderstandingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof retryRoomUnderstanding>>, TError,RetryRoomUnderstandingMutationVariables, TContext> => {
+
+const mutationKey = getRetryRoomUnderstandingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof retryRoomUnderstanding>>, RetryRoomUnderstandingMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  retryRoomUnderstanding(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RetryRoomUnderstandingMutationResult = NonNullable<Awaited<ReturnType<typeof retryRoomUnderstanding>>>
+
+    export type RetryRoomUnderstandingMutationError = ErrorType<ErrorResponse>
+    export type RetryRoomUnderstandingMutationVariables = {id: string}
+
+    /**
+ * @summary Request a retry for the room's understanding
+ */
+export const useRetryRoomUnderstanding = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof retryRoomUnderstanding>>, TError,RetryRoomUnderstandingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof retryRoomUnderstanding>>,
+        TError,
+        RetryRoomUnderstandingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRetryRoomUnderstandingMutationOptions(options));
     }
 

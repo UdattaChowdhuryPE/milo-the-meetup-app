@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
-import { and, asc, eq } from "drizzle-orm";
-import { db, messagesTable, participantsTable, roomsTable } from "@workspace/db";
+import { and, asc, eq, sql } from "drizzle-orm";
+import { db, messagesTable, participantsTable, roomAnalysisTable, roomsTable } from "@workspace/db";
+import { getRoomUnderstanding, retryRoomUnderstanding } from "../lib/room-understanding";
 import {
   CreateRoomBody,
   CreateRoomResponse,
@@ -15,6 +16,10 @@ import {
   SendRoomMessageHeader,
   SendRoomMessageBody,
   SendRoomMessageResponse,
+  GetRoomUnderstandingParams,
+  GetRoomUnderstandingResponse,
+  RetryRoomUnderstandingParams,
+  RetryRoomUnderstandingResponse,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -178,13 +183,61 @@ router.post("/rooms/:id/messages", async (req, res): Promise<void> => {
     return;
   }
 
-  const [message] = await db.insert(messagesTable).values({
-    roomId: room.id,
-    participantId: participant.id,
-    content,
-  }).returning();
+  const message = await db.transaction(async (tx) => {
+    // Serialize writers to a room. A message cannot commit behind the analysis cursor.
+    await tx.select({ id: roomsTable.id }).from(roomsTable)
+      .where(eq(roomsTable.id, room.id)).for("update");
+    const [created] = await tx.insert(messagesTable).values({
+      roomId: room.id,
+      participantId: participant.id,
+      content,
+      createdAt: sql`clock_timestamp()`,
+    }).returning();
+    if (!created) throw new Error("Message creation did not return a message");
+    await tx.insert(roomAnalysisTable).values({
+      roomId: room.id, status: "pending", pendingMessageId: created.id,
+      dueAt: new Date(Date.now() + 5000),
+    }).onConflictDoUpdate({
+      target: roomAnalysisTable.roomId,
+      set: {
+        pendingMessageId: created.id, dueAt: new Date(Date.now() + 5000),
+        status: sql`CASE WHEN ${roomAnalysisTable.status} = 'processing' THEN 'processing' ELSE 'pending' END`,
+        attempts: sql`CASE WHEN ${roomAnalysisTable.status} = 'processing' THEN ${roomAnalysisTable.attempts} ELSE 0 END`,
+        errorCode: null,
+      },
+    });
+    return created;
+  });
   if (!message) throw new Error("Message creation did not return a message");
   res.status(201).json(SendRoomMessageResponse.parse({ ...message, senderName: participant.name }));
+});
+
+router.get("/rooms/:id/understanding", async (req, res): Promise<void> => {
+  const params = GetRoomUnderstandingParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid room link." });
+    return;
+  }
+  const [room] = await db.select({ id: roomsTable.id }).from(roomsTable).where(eq(roomsTable.id, params.data.id));
+  if (!room) {
+    res.status(404).json({ error: "Room not found." });
+    return;
+  }
+  res.json(GetRoomUnderstandingResponse.parse(await getRoomUnderstanding(room.id)));
+});
+
+router.post("/rooms/:id/understanding/retry", async (req, res): Promise<void> => {
+  const params = RetryRoomUnderstandingParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid room link." });
+    return;
+  }
+  const [room] = await db.select({ id: roomsTable.id }).from(roomsTable).where(eq(roomsTable.id, params.data.id));
+  if (!room) {
+    res.status(404).json({ error: "Room not found." });
+    return;
+  }
+  res.status(202).json(RetryRoomUnderstandingResponse.parse(await retryRoomUnderstanding(room.id)));
 });
 
 export default router;

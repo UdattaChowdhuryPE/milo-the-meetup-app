@@ -206,6 +206,64 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /rooms/{id}/understanding:
+    get:
+      operationId: getRoomUnderstanding
+      tags: [rooms]
+      summary: Get saved understanding of a room's conversation
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Saved understanding and analysis status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomUnderstanding"
+        "400":
+          description: Invalid room ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Room not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /rooms/{id}/understanding/retry:
+    post:
+      operationId: retryRoomUnderstanding
+      tags: [rooms]
+      summary: Request a retry for the room's understanding
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "202":
+          description: Analysis queued or already up to date
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomUnderstanding"
+        "400":
+          description: Invalid room ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Room not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -305,6 +363,40 @@ components:
         createdAt:
           type: string
           format: date-time
+    UnderstandingInsight:
+      type: object
+      required: [id, kind, value, normalizedValue, scope, participantId, strength, confidence, status, sourceMessageIds, supersedesInsightId]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string }
+        value: { type: string }
+        normalizedValue:
+          type: ["object", "null"]
+          additionalProperties: false
+          required: [amount, unit, comparison]
+          properties:
+            amount: { type: ["number", "null"] }
+            unit: { type: ["string", "null"] }
+            comparison: { type: ["string", "null"] }
+        scope: { type: string, enum: [group, participant] }
+        participantId: { type: ["string", "null"], format: uuid }
+        strength: { type: string, enum: [hard_constraint, strong_preference, preference] }
+        confidence: { type: string, enum: [high, medium, low] }
+        status: { type: string, enum: [active, superseded, conflicting, uncertain] }
+        sourceMessageIds:
+          type: array
+          items: { type: string, format: uuid }
+        supersedesInsightId: { type: ["string", "null"], format: uuid }
+    RoomUnderstanding:
+      type: object
+      required: [insights, analysisStatus, updatedAt]
+      properties:
+        insights:
+          type: array
+          items:
+            $ref: "#/components/schemas/UnderstandingInsight"
+        analysisStatus: { type: string, enum: [idle, pending, processing, failed] }
+        updatedAt: { type: ["string", "null"], format: date-time }
     Room:
       type: object
       properties:
