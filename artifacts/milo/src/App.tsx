@@ -5,6 +5,8 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
+import CreateRoom from '@/pages/create-room';
+import RoomPage from '@/pages/room';
 import {
   Route,
   Switch,
@@ -68,9 +70,9 @@ function HeroMap() {
   );
 }
 
-function CreateRoomButton({ onNotice, className = '' }: { onNotice: () => void; className?: string }) {
+function CreateRoomButton({ onCreate, className = '' }: { onCreate: () => void; className?: string }) {
   return (
-    <button className={`milo-primary-button ${className}`} type="button" onClick={onNotice} data-testid="button-create-room">
+    <button className={`milo-primary-button ${className}`} type="button" onClick={onCreate} data-testid="button-create-room">
       Create a room →
     </button>
   );
@@ -78,7 +80,7 @@ function CreateRoomButton({ onNotice, className = '' }: { onNotice: () => void; 
 
 function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [notice, setNotice] = useState(false);
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     document.title = 'Milo — The best way to meet your friends.';
@@ -102,7 +104,7 @@ function Home() {
     if (!ogDescription.parentNode) document.head.appendChild(ogDescription);
   }, []);
 
-  const showComingSoon = () => setNotice(true);
+  const openCreateRoom = () => setLocation('/create-room');
   const closeMobileMenu = () => setMobileMenuOpen(false);
   const scrollToHow = () => {
     closeMobileMenu();
@@ -132,7 +134,7 @@ function Home() {
             <nav className={`milo-nav-links ${mobileMenuOpen ? 'is-open' : ''}`} aria-label="Primary navigation">
               <a href="#how-it-works" onClick={closeMobileMenu} data-testid="link-how-it-works">How it works</a>
               <a href="#about" onClick={closeMobileMenu} data-testid="link-about">About</a>
-              <button className="milo-nav-cta" type="button" onClick={showComingSoon} data-testid="button-nav-create-room">Create a room</button>
+              <button className="milo-nav-cta" type="button" onClick={openCreateRoom} data-testid="button-nav-create-room">Create a room</button>
             </nav>
           </div>
         </header>
@@ -144,7 +146,7 @@ function Home() {
               Milo helps you and your friends figure out where to go, what to do, and what’s fairest for everyone.
             </p>
             <div className="milo-actions">
-              <CreateRoomButton onNotice={showComingSoon} />
+              <CreateRoomButton onCreate={openCreateRoom} />
               <button className="milo-text-button" type="button" onClick={scrollToHow} data-testid="button-see-how-it-works">
                 See how it works <ArrowDown size={15} aria-hidden="true" />
               </button>
@@ -230,7 +232,7 @@ function Home() {
         <div className="milo-container milo-final-inner">
           <div className="milo-eyebrow">For the next group chat</div>
           <h2>Next time your group says <em>“Where should we go?”</em> Open Milo.</h2>
-          <CreateRoomButton onNotice={showComingSoon} />
+          <CreateRoomButton onCreate={openCreateRoom} />
           <footer className="milo-footer">
             <span>Milo</span>
             <span>Make room for everyone.</span>
@@ -239,11 +241,6 @@ function Home() {
         </div>
       </section>
 
-      {notice && (
-        <div className="milo-notice" role="status" data-testid="status-coming-soon">
-          Room creation is coming soon. For now, send Milo to the friend who always asks “Where should we go?”
-        </div>
-      )}
     </main>
   );
 }
@@ -253,6 +250,8 @@ function Router() {
     <RoutedErrorBoundary>
       <Switch>
         <Route path="/" component={Home} />
+        <Route path="/create-room" component={CreateRoom} />
+        <Route path="/room/:id" component={RoomPage} />
         <Route component={NotFound} />
       </Switch>
     </RoutedErrorBoundary>

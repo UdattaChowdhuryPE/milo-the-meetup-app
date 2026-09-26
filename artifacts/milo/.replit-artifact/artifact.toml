@@ -1,7 +1,7 @@
 kind = "web"
 previewPath = "/"
 title = "Milo"
-description = "Milo is a warm, polished landing page for a consumer product that helps friends find a place or activity that works for everyone. This first version introduces Milo’s identity and explains the product without implementing rooms, accounts, AI, maps, or backend features."
+description = "Milo helps friend groups make plans together. Its landing page introduces the product, and its room flow lets a creator start a persistent room, share its link, and see the conversation, understanding, and suggestions spaces that will grow with future features."
 version = "1.0.0"
 id = "artifacts/milo"
 router = "path"
