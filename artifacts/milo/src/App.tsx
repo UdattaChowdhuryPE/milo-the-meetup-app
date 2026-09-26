@@ -234,7 +234,7 @@ function Home() {
           <footer className="milo-footer">
             <span>Milo</span>
             <span>Make room for everyone.</span>
-            <span>© 2025 Milo</span>
+             <span>© {new Date().getFullYear()} Milo</span>
           </footer>
         </div>
       </section>

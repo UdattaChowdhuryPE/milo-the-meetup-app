@@ -1,44 +1,47 @@
-# [Project name]
+# Milo
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Milo helps friend groups decide where to go and what to do together, while considering everyone's preferences, constraints, and travel burden. It supports group decisions; it does not make the decision for them.
 
 ## Run & Operate
 
 - `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/milo run dev` — run the Milo web app through its managed workflow
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- The current landing page needs no API, database, or app secrets.
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Web: React + Vite, served at `/`
+- Shared API/DB libraries exist in the workspace template but are not used by Milo's first feature.
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/milo/src/App.tsx` — frontend-only landing page and geographic hero illustration
+- `artifacts/milo/src/index.css` — Milo typography, colors, motion, and responsive styles
+- `artifacts/milo/index.html` — page and social metadata
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Build one explicitly requested feature at a time. Do not prebuild rooms, authentication, chat, AI, real maps, location search, recommendations, travel calculations, voting, or persistence.
+- Keep AI reasoning separate from deterministic travel and ranking calculations when those features are eventually requested; do not invent factual place or travel data.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Feature 1 is a responsive marketing landing page only. Its Create a room buttons explain that room creation is coming soon; they do not create rooms.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- The product is named **Milo**. Earlier background text also said “Converge,” but the explicit Feature 1 request establishes Milo branding.
+- Preserve a warm, social, modern, geographic, premium consumer feel. Avoid generic AI SaaS styling, purple gradients, glowing blobs, robot/sparkle art, heavy glassmorphism, oversized rounded cards, and dashboard templates.
+- Reuse Milo's existing visual language for subsequent features and do not redesign unrelated areas.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- The app is intentionally frontend-only for Feature 1; the API server workflow does not need to be started to preview the landing page.
 
 ## Pointers
 
