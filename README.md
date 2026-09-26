@@ -5,6 +5,16 @@
 
 Getting friends to agree on where to go is difficult when everyone has different preferences, constraints, budgets, locations, and opinions. Milo lets the group talk naturally instead of completing a long form. It turns that conversation into structured, source-linked insights, then finds real restaurant options that consider the group.
 
+## Screenshots
+
+### Landing page
+
+[![Milo's landing page](docs/screenshots/milo-homepage.jpg)](docs/screenshots/milo-homepage.jpg)
+
+### Create a room
+
+[![Milo's room creation form](docs/screenshots/create-room.jpg)](docs/screenshots/create-room.jpg)
+
 ## Features
 
 - Create a persistent room, share its link, and let friends join and chat.
