@@ -22,6 +22,8 @@ import type {
 import type {
   ErrorResponse,
   HealthStatus,
+  Participant,
+  ParticipantInput,
   Room,
   RoomInput
 } from './api.schemas';
@@ -295,4 +297,93 @@ export function useGetRoom<TData = Awaited<ReturnType<typeof getRoom>>, TError =
 
 
 
+
+export const getJoinRoomUrl = (id: string,) => {
+
+
+
+
+  return `/api/rooms/${id}/participants`
+}
+
+/**
+ * @summary Join a room as a participant
+ */
+export const joinRoom = async (id: string,
+    participantInput: ParticipantInput, options?: Parameters<typeof customFetch>[1]): Promise<Participant> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Participant>(getJoinRoomUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(participantInput)
+  }
+);}
+
+
+
+
+
+export const getJoinRoomMutationKey = () => ['joinRoom'] as const;
+
+export const getJoinRoomMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof joinRoom>>, TError,JoinRoomMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof joinRoom>>, TError,JoinRoomMutationVariables, TContext> => {
+
+const mutationKey = getJoinRoomMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof joinRoom>>, JoinRoomMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  joinRoom(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type JoinRoomMutationResult = NonNullable<Awaited<ReturnType<typeof joinRoom>>>
+    export type JoinRoomMutationBody = BodyType<ParticipantInput>
+    export type JoinRoomMutationError = ErrorType<ErrorResponse>
+    export type JoinRoomMutationVariables = {id: string;data: BodyType<ParticipantInput>}
+
+    /**
+ * @summary Join a room as a participant
+ */
+export const useJoinRoom = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof joinRoom>>, TError,JoinRoomMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof joinRoom>>,
+        TError,
+        JoinRoomMutationVariables,
+        TContext
+      > => {
+      return useMutation(getJoinRoomMutationOptions(options));
+    }
 

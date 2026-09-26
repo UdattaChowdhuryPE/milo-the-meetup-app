@@ -24,6 +24,15 @@ export interface RoomInput {
   creatorName: string;
 }
 
+export interface ParticipantInput {
+  /**
+     * @minLength 1
+     * @maxLength 40
+     */
+  name: string;
+  browserIdentity: string;
+}
+
 export type ParticipantRole = typeof ParticipantRole[keyof typeof ParticipantRole];
 
 
@@ -35,6 +44,8 @@ export const ParticipantRole = {
 export interface Participant {
   id: string;
   roomId: string;
+  /** @nullable */
+  browserIdentity: string | null;
   name: string;
   role: ParticipantRole;
   joinedAt: string;

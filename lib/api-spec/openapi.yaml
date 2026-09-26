@@ -81,6 +81,49 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /rooms/{id}/participants:
+    post:
+      operationId: joinRoom
+      tags: [rooms]
+      summary: Join a room as a participant
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParticipantInput"
+      responses:
+        "200":
+          description: This browser identity already belongs to the room
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Participant"
+        "201":
+          description: Participant joined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Participant"
+        "400":
+          description: Invalid participant details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Room not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -108,6 +151,20 @@ components:
       required:
         - name
         - creatorName
+    ParticipantInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 40
+        browserIdentity:
+          type: string
+          format: uuid
+      required:
+        - name
+        - browserIdentity
     Participant:
       type: object
       properties:
@@ -116,6 +173,9 @@ components:
           format: uuid
         roomId:
           type: string
+          format: uuid
+        browserIdentity:
+          type: ["string", "null"]
           format: uuid
         name:
           type: string
@@ -128,6 +188,7 @@ components:
       required:
         - id
         - roomId
+        - browserIdentity
         - name
         - role
         - joinedAt

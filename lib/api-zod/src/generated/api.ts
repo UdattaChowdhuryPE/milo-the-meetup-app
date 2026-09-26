@@ -42,6 +42,7 @@ export const CreateRoomResponse = zod.object({
   "participants": zod.array(zod.object({
   "id": zod.string().uuid(),
   "roomId": zod.string().uuid(),
+  "browserIdentity": zod.string().uuid().nullable(),
   "name": zod.string(),
   "role": zod.enum(['creator', 'member']),
   "joinedAt": zod.coerce.date()
@@ -64,10 +65,37 @@ export const GetRoomResponse = zod.object({
   "participants": zod.array(zod.object({
   "id": zod.string().uuid(),
   "roomId": zod.string().uuid(),
+  "browserIdentity": zod.string().uuid().nullable(),
   "name": zod.string(),
   "role": zod.enum(['creator', 'member']),
   "joinedAt": zod.coerce.date()
 }))
+})
+
+
+/**
+ * @summary Join a room as a participant
+ */
+export const JoinRoomParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const joinRoomBodyNameMax = 40;
+
+
+
+export const JoinRoomBody = zod.object({
+  "name": zod.string().min(1).max(joinRoomBodyNameMax),
+  "browserIdentity": zod.string().uuid()
+})
+
+export const JoinRoomResponse = zod.object({
+  "id": zod.string().uuid(),
+  "roomId": zod.string().uuid(),
+  "browserIdentity": zod.string().uuid().nullable(),
+  "name": zod.string(),
+  "role": zod.enum(['creator', 'member']),
+  "joinedAt": zod.coerce.date()
 })
 
 

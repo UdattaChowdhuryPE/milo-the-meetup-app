@@ -9,6 +9,7 @@
 export * from './errorResponse';
 export * from './healthStatus';
 export * from './participant';
+export * from './participantInput';
 export * from './participantRole';
 export * from './room';
 export * from './roomInput';
