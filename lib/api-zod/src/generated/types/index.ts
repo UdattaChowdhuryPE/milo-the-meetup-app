@@ -8,6 +8,8 @@
 
 export * from './errorResponse';
 export * from './healthStatus';
+export * from './message';
+export * from './messageInput';
 export * from './participant';
 export * from './participantInput';
 export * from './participantRole';

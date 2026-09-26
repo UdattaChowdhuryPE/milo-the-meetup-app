@@ -22,6 +22,8 @@ import type {
 import type {
   ErrorResponse,
   HealthStatus,
+  Message,
+  MessageInput,
   Participant,
   ParticipantInput,
   Room,
@@ -385,5 +387,171 @@ export const useJoinRoom = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getJoinRoomMutationOptions(options));
+    }
+
+export const getGetRoomMessagesUrl = (id: string,) => {
+
+
+
+
+  return `/api/rooms/${id}/messages`
+}
+
+/**
+ * @summary List room messages in chronological order
+ */
+export const getRoomMessages = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<Message[]> => {
+
+  return customFetch<Message[]>(getGetRoomMessagesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRoomMessagesQueryKey = (id: string,) => {
+    return [
+    `/api/rooms/${id}/messages`
+    ] as const;
+    }
+
+
+export const getGetRoomMessagesQueryOptions = <TData = Awaited<ReturnType<typeof getRoomMessages>>, TError = ErrorType<ErrorResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRoomMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRoomMessagesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRoomMessages>>> = ({ signal }) => getRoomMessages(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRoomMessages>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRoomMessagesQueryResult = NonNullable<Awaited<ReturnType<typeof getRoomMessages>>>
+export type GetRoomMessagesQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List room messages in chronological order
+ */
+
+export function useGetRoomMessages<TData = Awaited<ReturnType<typeof getRoomMessages>>, TError = ErrorType<ErrorResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRoomMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRoomMessagesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSendRoomMessageUrl = (id: string,) => {
+
+
+
+
+  return `/api/rooms/${id}/messages`
+}
+
+/**
+ * @summary Send a message as a room participant
+ */
+export const sendRoomMessage = async (id: string,
+    messageInput: MessageInput, options?: Parameters<typeof customFetch>[1]): Promise<Message> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Message>(getSendRoomMessageUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(messageInput)
+  }
+);}
+
+
+
+
+
+export const getSendRoomMessageMutationKey = () => ['sendRoomMessage'] as const;
+
+export const getSendRoomMessageMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendRoomMessage>>, TError,SendRoomMessageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendRoomMessage>>, TError,SendRoomMessageMutationVariables, TContext> => {
+
+const mutationKey = getSendRoomMessageMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendRoomMessage>>, SendRoomMessageMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  sendRoomMessage(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendRoomMessageMutationResult = NonNullable<Awaited<ReturnType<typeof sendRoomMessage>>>
+    export type SendRoomMessageMutationBody = BodyType<MessageInput>
+    export type SendRoomMessageMutationError = ErrorType<ErrorResponse>
+    export type SendRoomMessageMutationVariables = {id: string;data: BodyType<MessageInput>}
+
+    /**
+ * @summary Send a message as a room participant
+ */
+export const useSendRoomMessage = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendRoomMessage>>, TError,SendRoomMessageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendRoomMessage>>,
+        TError,
+        SendRoomMessageMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSendRoomMessageMutationOptions(options));
     }
 

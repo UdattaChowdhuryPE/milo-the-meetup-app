@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useLocation, Link } from 'wouter';
@@ -12,6 +12,8 @@ type RoomFormValues = { name: string; description: string; creatorName: string }
 function CreateRoom() {
   const [, setLocation] = useLocation();
   const createRoom = useCreateRoom();
+  const [identityError, setIdentityError] = useState<string | null>(null);
+  const [pendingRoom, setPendingRoom] = useState<{ id: string; participantId?: string; browserIdentity: string } | null>(null);
   const form = useForm<RoomFormValues>({
     defaultValues: { name: '', description: '', creatorName: '' },
     mode: 'onSubmit',
@@ -29,15 +31,29 @@ function CreateRoom() {
   }, []);
 
   function onSubmit(values: RoomFormValues) {
+    if (pendingRoom) return;
+    const browserIdentity = window.crypto?.randomUUID?.();
+    if (!browserIdentity) {
+      setIdentityError('Your browser could not create a room identity. Try a modern browser.');
+      return;
+    }
+    setIdentityError(null);
     const data: RoomInput = {
       name: values.name.trim(),
       creatorName: values.creatorName.trim(),
+      browserIdentity,
       ...(values.description.trim() ? { description: values.description.trim() } : {}),
     };
     createRoom.mutate({ data }, {
       onSuccess: (room) => {
         const creator = room.participants.find((person) => person.role === 'creator');
-        if (creator) saveRoomMembership(room.id, { participantId: creator.id });
+        if (!creator || !saveRoomMembership(room.id, { participantId: creator.id, browserIdentity })) {
+          setPendingRoom({ id: room.id, participantId: creator?.id, browserIdentity });
+          setIdentityError(creator
+            ? 'Your room was created, but this browser could not save your membership. Enable browser storage, then retry below.'
+            : 'Your room was created, but we could not identify its creator. You can still open its link and join as a participant.');
+          return;
+        }
         setLocation(`/room/${room.id}`);
       },
     });
@@ -96,8 +112,23 @@ function CreateRoom() {
                   <FormMessage className="workspace-error-text" data-testid="error-creator-name" />
                 </FormItem>
               )} />
-              {createRoom.isError && <p className="workspace-error-text" role="alert" data-testid="error-create-room">We couldn’t create your room. Please try again.</p>}
-              <button className="workspace-submit" type="submit" disabled={createRoom.isPending} data-testid="button-submit-create-room">
+              {(createRoom.isError || identityError) && <p className="workspace-error-text" role="alert" data-testid="error-create-room">{identityError ?? 'We couldn’t create your room. Please try again.'}</p>}
+              {pendingRoom && (
+                <div className="workspace-create-recovery" data-testid="status-created-room-recovery">
+                  {pendingRoom.participantId && (
+                    <button className="workspace-back" type="button" onClick={() => {
+                      if (saveRoomMembership(pendingRoom.id, { participantId: pendingRoom.participantId, browserIdentity: pendingRoom.browserIdentity })) {
+                        setLocation(`/room/${pendingRoom.id}`);
+                      } else {
+                        setIdentityError('Browser storage is still unavailable. Your room was created, but your membership is not saved yet.');
+                      }
+                    }} data-testid="button-retry-creator-membership">Try saving membership again</button>
+                  )}
+                  <Link href={`/room/${pendingRoom.id}`} data-testid="link-created-room-recovery">Open the room link instead</Link>
+                  <span className="workspace-field-hint">Opening without saved membership will ask you to join as a new participant.</span>
+                </div>
+              )}
+              <button className="workspace-submit" type="submit" disabled={createRoom.isPending || !!pendingRoom} data-testid="button-submit-create-room">
                 {createRoom.isPending ? 'Creating your room…' : 'Create room'} {!createRoom.isPending && <ArrowRight size={16} aria-hidden="true" />}
               </button>
             </form>

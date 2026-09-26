@@ -19,4 +19,5 @@ export interface RoomInput {
      * @maxLength 40
      */
   creatorName: string;
+  browserIdentity?: string;
 }

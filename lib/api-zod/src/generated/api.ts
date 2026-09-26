@@ -31,7 +31,8 @@ export const createRoomBodyCreatorNameMax = 40;
 export const CreateRoomBody = zod.object({
   "name": zod.string().min(1).max(createRoomBodyNameMax),
   "description": zod.string().max(createRoomBodyDescriptionMax).optional(),
-  "creatorName": zod.string().min(1).max(createRoomBodyCreatorNameMax)
+  "creatorName": zod.string().min(1).max(createRoomBodyCreatorNameMax),
+  "browserIdentity": zod.string().uuid().optional()
 })
 
 export const CreateRoomResponse = zod.object({
@@ -93,6 +94,54 @@ export const JoinRoomResponse = zod.object({
   "name": zod.string(),
   "role": zod.enum(['creator', 'member']),
   "joinedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List room messages in chronological order
+ */
+export const GetRoomMessagesParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetRoomMessagesResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "roomId": zod.string().uuid(),
+  "participantId": zod.string().uuid(),
+  "senderName": zod.string(),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const GetRoomMessagesResponse = zod.array(GetRoomMessagesResponseItem)
+
+
+/**
+ * @summary Send a message as a room participant
+ */
+export const SendRoomMessageParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const SendRoomMessageHeader = zod.object({
+  "X-Milo-Browser-Identity": zod.string().uuid().describe('The sender\'s private, browser-held room identity. Never include this in public responses.')
+})
+
+export const sendRoomMessageBodyContentMax = 2000;
+
+
+
+export const SendRoomMessageBody = zod.object({
+  "participantId": zod.string().uuid(),
+  "content": zod.string().min(1).max(sendRoomMessageBodyContentMax)
+})
+
+export const SendRoomMessageResponse = zod.object({
+  "id": zod.string().uuid(),
+  "roomId": zod.string().uuid(),
+  "participantId": zod.string().uuid(),
+  "senderName": zod.string(),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date()
 })
 
 

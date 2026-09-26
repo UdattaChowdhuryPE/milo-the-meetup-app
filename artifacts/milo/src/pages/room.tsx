@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'wouter';
 import { getGetRoomQueryKey, useGetRoom, useJoinRoom, type Room } from '@workspace/api-client-react';
 import { readRoomMembership, saveRoomMembership } from '@/lib/room-membership';
+import RoomConversation from '@/components/room-conversation';
 import '../rooms.css';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -65,7 +66,7 @@ function RoomPage() {
   const id = params.id ?? '';
   const valid = UUID_PATTERN.test(id);
   const { data: room, isLoading, isError, error, refetch } = useGetRoom(id, {
-    query: { enabled: valid, queryKey: getGetRoomQueryKey(id), retry: false },
+    query: { enabled: valid, queryKey: getGetRoomQueryKey(id), retry: false, refetchInterval: 10000 },
   });
   const queryClient = useQueryClient();
   const joinRoom = useJoinRoom();
@@ -222,16 +223,10 @@ function RoomPage() {
           )}
         </div>
         <div className="workspace-room-grid">
-          <section className="workspace-panel workspace-panel-conversation" aria-labelledby="conversation-heading" data-testid="section-conversation">
-            <div className="workspace-panel-top"><span className="workspace-panel-label">01 / CONVERSATION</span><span className="workspace-index">The starting point</span></div>
-            <div className="workspace-panel-ornament" aria-hidden="true" />
-            <div className="workspace-panel-body">
-              <span className="workspace-panel-symbol" aria-hidden="true" />
-              <h2 id="conversation-heading">The conversation starts here.</h2>
-              <p>There’s nothing to read yet. A space for the group’s conversation will live here when it’s available.</p>
-            </div>
-            <div className="workspace-panel-bottom workspace-footnote">No messages yet</div>
-          </section>
+          <RoomConversation roomId={id} participant={currentParticipant} browserIdentity={activeMembership?.browserIdentity} onJoinAgain={() => {
+            setMembership({ roomId: id, value: null });
+            requestAnimationFrame(() => document.getElementById('join-name')?.focus());
+          }} />
           <div className="workspace-side">
             <section className="workspace-panel workspace-panel-understanding" aria-labelledby="understanding-heading" data-testid="section-understanding">
               <div className="workspace-panel-top"><span className="workspace-panel-label">02 / MILO’S UNDERSTANDING</span></div>

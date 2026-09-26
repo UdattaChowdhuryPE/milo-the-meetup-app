@@ -22,6 +22,7 @@ export interface RoomInput {
      * @maxLength 40
      */
   creatorName: string;
+  browserIdentity?: string;
 }
 
 export interface ParticipantInput {
@@ -47,6 +48,24 @@ export interface Participant {
   name: string;
   role: ParticipantRole;
   joinedAt: string;
+}
+
+export interface MessageInput {
+  participantId: string;
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     */
+  content: string;
+}
+
+export interface Message {
+  id: string;
+  roomId: string;
+  participantId: string;
+  senderName: string;
+  content: string;
+  createdAt: string;
 }
 
 export interface Room {

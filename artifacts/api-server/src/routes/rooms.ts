@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { and, eq } from "drizzle-orm";
-import { db, participantsTable, roomsTable } from "@workspace/db";
+import { and, asc, eq } from "drizzle-orm";
+import { db, messagesTable, participantsTable, roomsTable } from "@workspace/db";
 import {
   CreateRoomBody,
   CreateRoomResponse,
@@ -9,6 +9,12 @@ import {
   JoinRoomBody,
   JoinRoomParams,
   JoinRoomResponse,
+  GetRoomMessagesParams,
+  GetRoomMessagesResponse,
+  SendRoomMessageParams,
+  SendRoomMessageHeader,
+  SendRoomMessageBody,
+  SendRoomMessageResponse,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -35,6 +41,7 @@ router.post("/rooms", async (req, res): Promise<void> => {
       roomId: room.id,
       name: creatorName,
       role: "creator",
+      browserIdentity: parsed.data.browserIdentity ?? null,
     }).returning();
     if (!creator) throw new Error("Room creation did not return its creator");
     return { ...room, participants: [creator] };
@@ -104,6 +111,80 @@ router.post("/rooms/:id/participants", async (req, res): Promise<void> => {
   ));
   if (!existing) throw new Error("Room participant conflict did not return a participant");
   res.status(200).json(JoinRoomResponse.parse(existing));
+});
+
+router.get("/rooms/:id/messages", async (req, res): Promise<void> => {
+  const params = GetRoomMessagesParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid room link." });
+    return;
+  }
+  const [room] = await db.select({ id: roomsTable.id })
+    .from(roomsTable).where(eq(roomsTable.id, params.data.id));
+  if (!room) {
+    res.status(404).json({ error: "Room not found." });
+    return;
+  }
+
+  const messages = await db.select({
+    id: messagesTable.id,
+    roomId: messagesTable.roomId,
+    participantId: messagesTable.participantId,
+    senderName: participantsTable.name,
+    content: messagesTable.content,
+    createdAt: messagesTable.createdAt,
+  }).from(messagesTable)
+    .innerJoin(participantsTable, eq(messagesTable.participantId, participantsTable.id))
+    .where(eq(messagesTable.roomId, room.id))
+    .orderBy(asc(messagesTable.createdAt), asc(messagesTable.id));
+
+  res.json(GetRoomMessagesResponse.parse(messages));
+});
+
+router.post("/rooms/:id/messages", async (req, res): Promise<void> => {
+  const params = SendRoomMessageParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid room link." });
+    return;
+  }
+  const body = SendRoomMessageBody.safeParse(req.body);
+  const content = body.success ? body.data.content.trim() : "";
+  if (!body.success || !content) {
+    res.status(400).json({ error: "Write a message of 1 to 2000 characters." });
+    return;
+  }
+  const identity = SendRoomMessageHeader.safeParse({
+    "X-Milo-Browser-Identity": req.get("X-Milo-Browser-Identity"),
+  });
+  if (!identity.success) {
+    res.status(403).json({ error: "Your browser identity is unavailable. Please join this room first." });
+    return;
+  }
+
+  const [room] = await db.select({ id: roomsTable.id })
+    .from(roomsTable).where(eq(roomsTable.id, params.data.id));
+  if (!room) {
+    res.status(404).json({ error: "Room not found." });
+    return;
+  }
+  const [participant] = await db.select().from(participantsTable)
+    .where(and(eq(participantsTable.id, body.data.participantId), eq(participantsTable.roomId, room.id)));
+  if (!participant) {
+    res.status(404).json({ error: "Participant not found in this room." });
+    return;
+  }
+  if (!participant.browserIdentity || participant.browserIdentity !== identity.data["X-Milo-Browser-Identity"]) {
+    res.status(403).json({ error: "This browser cannot send as that participant." });
+    return;
+  }
+
+  const [message] = await db.insert(messagesTable).values({
+    roomId: room.id,
+    participantId: participant.id,
+    content,
+  }).returning();
+  if (!message) throw new Error("Message creation did not return a message");
+  res.status(201).json(SendRoomMessageResponse.parse({ ...message, senderName: participant.name }));
 });
 
 export default router;
