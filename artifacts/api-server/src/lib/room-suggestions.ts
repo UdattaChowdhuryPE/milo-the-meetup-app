@@ -7,7 +7,7 @@ import {
 import { logger } from "./logger";
 import {
   geocodeArea, getDrivingMinutes, getPlaceDetails, hasPlacesKey, searchRestaurants,
-  type Coordinates, type Place,
+  ProviderRequestError, type Coordinates, type Place,
 } from "./google-places";
 import { evaluateRestaurant } from "./suggestion-evaluation";
 
@@ -160,7 +160,16 @@ async function findForRun(run: typeof suggestionRunsTable.$inferSelect) {
   const locations = resolved.filter((result): result is PromiseFulfilledResult<{
     participantId: string; coordinates: Coordinates
   }> => result.status === "fulfilled").map((result) => result.value);
-  if (!locations.length) throw new Error("location_unresolved");
+  if (!locations.length) {
+    const failures = resolved.filter((result): result is PromiseRejectedResult => result.status === "rejected")
+      .map((result) => result.reason);
+    const providerFailures = failures.filter((error): error is ProviderRequestError =>
+      error instanceof ProviderRequestError);
+    // A provider outage or denied key is not a misspelled city, even if another origin had no results.
+    throw providerFailures.find((error) => error.code !== "location_not_found")
+      ?? providerFailures[0]
+      ?? new ProviderRequestError("geocoding_unavailable", "UNKNOWN_ERROR", null);
+  }
   const center = {
     latitude: locations.reduce((sum, origin) => sum + origin.coordinates.latitude, 0) / locations.length,
     longitude: locations.reduce((sum, origin) => sum + origin.coordinates.longitude, 0) / locations.length,
@@ -226,10 +235,15 @@ async function processNext(): Promise<void> {
       }).where(eq(suggestionRunsTable.id, run.id));
     });
   } catch (error) {
-    const code = error instanceof Error && ["provider_unavailable", "context_changed", "location_unresolved"]
-      .includes(error.message) ? error.message : "places_unavailable";
-    logger.warn({ roomId: run.roomId, code }, "Suggestion search could not complete");
-    const retry = code === "places_unavailable" && run.attempts < 2;
+    const code = error instanceof ProviderRequestError ? error.code
+      : error instanceof Error && ["provider_unavailable", "context_changed"].includes(error.message)
+        ? error.message : "places_unavailable";
+    logger.warn({
+      roomId: run.roomId, code,
+      ...(error instanceof ProviderRequestError
+        ? { googleStatus: error.googleStatus, httpStatus: error.httpStatus } : {}),
+    }, "Suggestion search could not complete");
+    const retry = ["places_unavailable", "geocoding_unavailable"].includes(code) && run.attempts < 2;
     await db.update(suggestionRunsTable).set({
       status: retry ? "pending" : "failed", errorCode: retry ? null : code,
       completedAt: retry ? null : new Date(),

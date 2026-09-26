@@ -121,6 +121,18 @@ const verdictLabels = {
   not_applicable: 'Not applicable',
 } as const;
 
+const searchFailureMessages: Record<string, string> = {
+  location_not_found: 'Google could not find a confirmed starting area. Check your area and try again.',
+  geocoding_denied: 'Google Geocoding access was denied. The app owner needs to check its API settings.',
+  geocoding_quota: 'Google Geocoding has reached a usage limit. Please try later.',
+  geocoding_invalid_request: 'Google could not use that starting area. Check it and try again.',
+  geocoding_invalid_response: 'Google returned unusable location data. Please try later.',
+  geocoding_unavailable: 'Google Geocoding is unavailable right now. Please try later.',
+  places_denied: 'Google Places access was denied. The app owner needs to check its API settings.',
+  places_quota: 'Google Places has reached a usage limit. Please try later.',
+  places_unavailable: 'Google Places is unavailable right now. Please try later.',
+};
+
 function RoomSuggestions({ roomId, participant, browserIdentity, insights, onShowInsight }: Props) {
   const queryClient = useQueryClient();
   const { data, isLoading, isError, refetch } = useGetRoomSuggestions(roomId, {
@@ -154,8 +166,9 @@ function RoomSuggestions({ roomId, participant, browserIdentity, insights, onSho
           current ? { ...current, status: accepted.status, runId: accepted.runId } : current);
         void queryClient.invalidateQueries({ queryKey: getGetRoomSuggestionsQueryKey(roomId) });
       },
-      onError: () => {
-        setSearchError('Couldn’t start the search. Please try again.');
+      onError: (error) => {
+        setSearchError(error.status === 429 && error.data?.error
+          ? error.data.error : 'Couldn’t start the search. Please try again.');
         void queryClient.invalidateQueries({ queryKey: getGetRoomSuggestionsQueryKey(roomId) });
       },
     });
@@ -185,7 +198,9 @@ function RoomSuggestions({ roomId, participant, browserIdentity, insights, onSho
             <div className="workspace-suggestions-skeleton" aria-hidden="true"><span /><span /><span /></div>
           </div>}
           {data.status === 'failed' && <div className="workspace-suggestions-note is-error" role="alert" data-testid="status-suggestions-failed">
-            <p>The restaurant search didn’t finish{data.errorCode ? ` (${data.errorCode.replace(/[_-]/g, ' ').toLowerCase()})` : ''}. No new options were added. You can try again.</p>
+            <p>{data.errorCode && searchFailureMessages[data.errorCode]
+              ? searchFailureMessages[data.errorCode]
+              : 'The restaurant search didn’t finish. No new options were added. You can try again.'}</p>
           </div>}
            {data.errorCode === 'details_limit_reached' && <div className="workspace-suggestions-note is-error" role="status"><p>This search has reached its restaurant-detail viewing limit. Ask Milo to refresh options when the group is ready.</p></div>}
            {!working && data.status === 'ready' && !data.stale && !data.errorCode && data.suggestions.length === 0 && <div className="workspace-suggestions-note" role="status" data-testid="status-suggestions-empty"><p>Nothing matched what Milo knows so far. Keep talking or confirm another area, then try again.</p></div>}

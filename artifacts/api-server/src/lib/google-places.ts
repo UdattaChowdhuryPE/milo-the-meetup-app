@@ -51,6 +51,38 @@ const PLACE_FIELDS = PLACES_FIELDS.replaceAll("places.", "");
 const TIMEOUT_MS = 8_000;
 const PLACES_BASE = "https://places.googleapis.com/v1";
 
+export type ProviderFailureCode =
+  | "location_not_found" | "geocoding_denied" | "geocoding_quota"
+  | "geocoding_invalid_request" | "geocoding_unavailable" | "geocoding_invalid_response"
+  | "places_denied" | "places_quota" | "places_unavailable";
+
+/** Only allowlisted provider codes enter logs; never keep an error body or credential-bearing URL. */
+export class ProviderRequestError extends Error {
+  readonly code: ProviderFailureCode;
+  readonly googleStatus: string;
+  readonly httpStatus: number | null;
+
+  constructor(
+    code: ProviderFailureCode,
+    googleStatus: string,
+    httpStatus: number | null,
+  ) {
+    super(code);
+    this.code = code;
+    this.googleStatus = googleStatus;
+    this.httpStatus = httpStatus;
+  }
+}
+
+function safeGoogleStatus(value: unknown): string {
+  const allowed = new Set([
+    "OK", "ZERO_RESULTS", "REQUEST_DENIED", "OVER_DAILY_LIMIT", "OVER_QUERY_LIMIT",
+    "INVALID_REQUEST", "UNKNOWN_ERROR", "PERMISSION_DENIED", "RESOURCE_EXHAUSTED",
+    "UNAVAILABLE", "DEADLINE_EXCEEDED",
+  ]);
+  return typeof value === "string" && allowed.has(value) ? value : "UNRECOGNIZED_STATUS";
+}
+
 export function hasPlacesKey(): boolean {
   return Boolean(process.env.GOOGLE_MAPS_API_KEY?.trim());
 }
@@ -82,6 +114,12 @@ function parseCoordinates(location: unknown): Coordinates | null {
     latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180
   ) return null;
   return { latitude, longitude };
+}
+
+function parseGeocodingCoordinates(location: unknown): Coordinates | null {
+  if (!isRecord(location)) return null;
+  // Legacy Geocoding uses lat/lng; Places and Routes use latitude/longitude.
+  return parseCoordinates({ latitude: location.lat, longitude: location.lng });
 }
 
 function parseHours(value: unknown): PlaceHours | null {
@@ -163,27 +201,42 @@ export async function searchRestaurants(query: string, center: Coordinates): Pro
   validateCoordinates(center);
   const cleanQuery = query.trim();
   if (!cleanQuery || cleanQuery.length > 200) throw new Error("Invalid restaurant search query");
-  const response = await fetchProvider(`${PLACES_BASE}/places:searchText`, {
-    method: "POST",
-    signal: timeoutSignal(),
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": apiKey(),
-      "X-Goog-FieldMask": PLACES_FIELDS,
-    },
-    body: JSON.stringify({
-      textQuery: cleanQuery,
-      pageSize: 20,
-      includedType: "restaurant",
-      strictTypeFiltering: true,
-      locationBias: {
-        circle: {
-          center: { latitude: center.latitude, longitude: center.longitude },
-          radius: 30_000,
-        },
+  let response: Response;
+  try {
+    response = await fetchProvider(`${PLACES_BASE}/places:searchText`, {
+      method: "POST",
+      signal: timeoutSignal(),
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey(),
+        "X-Goog-FieldMask": PLACES_FIELDS,
       },
-    }),
-  }, "Google Places search request failed");
+      body: JSON.stringify({
+        textQuery: cleanQuery,
+        pageSize: 20,
+        includedType: "restaurant",
+        strictTypeFiltering: true,
+        locationBias: {
+          circle: {
+            center: { latitude: center.latitude, longitude: center.longitude },
+            radius: 30_000,
+          },
+        },
+      }),
+    }, "Google Places search request failed");
+  } catch {
+    throw new ProviderRequestError("places_unavailable", "NETWORK_ERROR", null);
+  }
+  if (!response.ok) {
+    let status = "UNRECOGNIZED_STATUS";
+    try {
+      const body: unknown = await response.json();
+      if (isRecord(body) && isRecord(body.error)) status = safeGoogleStatus(body.error.status);
+    } catch { /* HTTP status remains available without retaining the response body. */ }
+    const code = response.status === 429 || status === "RESOURCE_EXHAUSTED" ? "places_quota"
+      : response.status === 403 || status === "PERMISSION_DENIED" ? "places_denied" : "places_unavailable";
+    throw new ProviderRequestError(code, status, response.status);
+  }
   const data = await readJson(response, "Google Places search failed");
   if (!isRecord(data)) throw new Error("Google Places returned an invalid search response");
   if (data.places === undefined) return [];
@@ -216,18 +269,37 @@ export async function geocodeArea(label: string): Promise<Coordinates> {
   const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
   url.searchParams.set("address", cleanLabel);
   url.searchParams.set("key", apiKey());
-  const response = await fetchProvider(url, { signal: timeoutSignal() }, "Google Geocoding request failed");
-  const data = await readJson(response, "Google Geocoding request failed");
-  if (!isRecord(data) || data.status !== "OK" || !Array.isArray(data.results)) {
-    throw new Error("Google Geocoding could not resolve the confirmed area");
+  let response: Response;
+  try {
+    response = await fetchProvider(url, { signal: timeoutSignal() }, "Google Geocoding request failed");
+  } catch {
+    throw new ProviderRequestError("geocoding_unavailable", "NETWORK_ERROR", null);
+  }
+  let data: unknown;
+  try {
+    data = await response.json() as unknown;
+  } catch {
+    throw new ProviderRequestError("geocoding_invalid_response", "INVALID_RESPONSE", response.status);
+  }
+  const status = isRecord(data) ? safeGoogleStatus(data.status) : "INVALID_RESPONSE";
+  if (status !== "OK" || !response.ok) {
+    const code = status === "ZERO_RESULTS" ? "location_not_found"
+      : status === "REQUEST_DENIED" || response.status === 403 ? "geocoding_denied"
+        : ["OVER_DAILY_LIMIT", "OVER_QUERY_LIMIT"].includes(status) || response.status === 429
+          ? "geocoding_quota"
+          : status === "INVALID_REQUEST" ? "geocoding_invalid_request" : "geocoding_unavailable";
+    throw new ProviderRequestError(code, status, response.status);
+  }
+  if (!isRecord(data) || !Array.isArray(data.results)) {
+    throw new ProviderRequestError("geocoding_invalid_response", status, response.status);
   }
   for (const result of data.results) {
     if (isRecord(result) && isRecord(result.geometry)) {
-      const coords = parseCoordinates(result.geometry.location);
+      const coords = parseGeocodingCoordinates(result.geometry.location);
       if (coords) return coords;
     }
   }
-  throw new Error("Google Geocoding returned no usable coordinates");
+  throw new ProviderRequestError("geocoding_invalid_response", status, response.status);
 }
 
 type RouteMatrixItem = {
