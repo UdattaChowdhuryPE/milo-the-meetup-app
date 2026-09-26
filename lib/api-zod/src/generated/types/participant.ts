@@ -10,8 +10,6 @@ import type { ParticipantRole } from './participantRole';
 export interface Participant {
   id: string;
   roomId: string;
-  /** @nullable */
-  browserIdentity: string | null;
   name: string;
   role: ParticipantRole;
   joinedAt: Date;

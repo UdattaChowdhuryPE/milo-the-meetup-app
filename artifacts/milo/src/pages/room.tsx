@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ArrowLeft, ArrowRight, Check, Copy, Link2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'wouter';
-import { getGetRoomQueryKey, useGetRoom } from '@workspace/api-client-react';
+import { getGetRoomQueryKey, useGetRoom, useJoinRoom, type Room } from '@workspace/api-client-react';
+import { readRoomMembership, saveRoomMembership } from '@/lib/room-membership';
 import '../rooms.css';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -65,6 +67,11 @@ function RoomPage() {
   const { data: room, isLoading, isError, error, refetch } = useGetRoom(id, {
     query: { enabled: valid, queryKey: getGetRoomQueryKey(id), retry: false },
   });
+  const queryClient = useQueryClient();
+  const joinRoom = useJoinRoom();
+  const [membership, setMembership] = useState(() => ({ roomId: id, value: readRoomMembership(id) }));
+  const [joinName, setJoinName] = useState('');
+  const [joinError, setJoinError] = useState<string | null>(null);
   const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'manual'>('idle');
   const urlInputRef = useRef<HTMLInputElement>(null);
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -75,6 +82,12 @@ function RoomPage() {
       ? `A space for ${room.name} on Milo. Make room for everyone.`
       : 'Open a room on Milo, a space to make plans with your friends.');
   }, [room?.name]);
+
+  useEffect(() => {
+    setMembership({ roomId: id, value: readRoomMembership(id) });
+    setJoinName('');
+    setJoinError(null);
+  }, [id]);
 
   async function shareRoom() {
     try {
@@ -96,6 +109,50 @@ function RoomPage() {
   }
   if (!room) return <RoomState kind="missing" />;
 
+  const activeMembership = membership.roomId === id ? membership.value : null;
+  const currentParticipant = room.participants.find((person) => person.id === activeMembership?.participantId);
+
+  function submitJoin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (joinRoom.isPending) return;
+    const name = joinName.trim();
+    if (!name || name.length > 40) {
+      setJoinError(name ? 'Use 40 characters or fewer.' : 'Enter your name to join.');
+      return;
+    }
+
+    const browserIdentity = activeMembership?.browserIdentity ?? window.crypto?.randomUUID?.();
+    if (!browserIdentity) {
+      setJoinError('Your browser could not create a room identity. Try a modern browser.');
+      return;
+    }
+    if (!saveRoomMembership(id, { browserIdentity })) {
+      setJoinError('Your browser could not save your membership. Enable browser storage and try again.');
+      return;
+    }
+
+    setMembership({ roomId: id, value: { browserIdentity } });
+    setJoinError(null);
+    joinRoom.mutate({ id, data: { name, browserIdentity } }, {
+      onSuccess: (participant) => {
+        const nextMembership = { browserIdentity, participantId: participant.id };
+        if (!saveRoomMembership(id, nextMembership)) {
+          setJoinError('You joined, but your browser could not save your membership for a future visit.');
+        }
+        setMembership({ roomId: id, value: nextMembership });
+        queryClient.setQueryData<Room>(getGetRoomQueryKey(id), (current) => {
+          if (!current || current.participants.some((person) => person.id === participant.id)) return current;
+          return { ...current, participants: [...current.participants, participant] };
+        });
+      },
+      onError: (joinFailure) => {
+        setJoinError((joinFailure as { status?: number }).status === 404
+          ? 'This room is no longer available. Refresh the page to check the link.'
+          : 'We couldn’t join this room. Please try again.');
+      },
+    });
+  }
+
   return (
     <main className="milo-workspace" data-testid="page-room">
       <RoomHeader />
@@ -111,6 +168,35 @@ function RoomPage() {
             {shareStatus === 'copied' ? 'Link copied' : 'Share room'}
           </button>
         </div>
+        {membership.roomId === id && !currentParticipant && (
+          <section className="workspace-join" aria-labelledby="join-heading" data-testid="section-join-room">
+            <div>
+              <div className="workspace-index">Join this room</div>
+              <h2 id="join-heading">You’re invited.</h2>
+              <p>Join the room and help figure out where everyone should go.</p>
+            </div>
+            <form className="workspace-join-form" onSubmit={submitJoin} noValidate data-testid="form-join-room">
+              <label className="workspace-field-label" htmlFor="join-name">Your name <span aria-hidden="true">*</span></label>
+              <input
+                id="join-name"
+                className="workspace-input"
+                type="text"
+                value={joinName}
+                onChange={(event) => { setJoinName(event.target.value); setJoinError(null); }}
+                placeholder="What should we call you?"
+                autoComplete="name"
+                maxLength={40}
+                required
+                aria-describedby={joinError ? 'join-error' : undefined}
+                data-testid="input-join-name"
+              />
+              {joinError && <p id="join-error" className="workspace-error-text" role="alert" data-testid="error-join-room">{joinError}</p>}
+              <button className="workspace-submit" type="submit" disabled={joinRoom.isPending} data-testid="button-join-room">
+                {joinRoom.isPending ? 'Joining…' : 'Join the room'} {!joinRoom.isPending && <ArrowRight size={16} aria-hidden="true" />}
+              </button>
+            </form>
+          </section>
+        )}
         <div className="workspace-room-rule">
           <div className="workspace-participants" aria-label="Room participants" data-testid="list-room-participants">
             <span className="workspace-index">In this room / {room.participants.length}</span>
@@ -118,11 +204,13 @@ function RoomPage() {
               <div className="workspace-person" key={person.id} data-testid={`participant-${person.id}`}>
                 <span className="workspace-avatar" aria-hidden="true">{person.name.trim().charAt(0).toUpperCase()}</span>
                 <span data-testid={`text-participant-name-${person.id}`}>{person.name}</span>
-                <span className="workspace-person-role">{person.role}</span>
+                {person.role === 'creator' && <span className="workspace-person-role">Creator</span>}
               </div>
             ))}
           </div>
-          <span className="workspace-footnote" data-testid="text-participants-hint">Just the creator for now · Share the room link with friends</span>
+          <span className="workspace-footnote" data-testid="text-participants-hint">
+            {currentParticipant ? `You’re here as ${currentParticipant.name} · Share the link with friends` : 'Join to appear here · Share the link with friends'}
+          </span>
         </div>
         <div aria-live="polite">
           {shareStatus === 'copied' && <p className="workspace-share-feedback" role="status" data-testid="status-share-room"><Link2 size={15} aria-hidden="true" /> Room link copied to clipboard.</p>}

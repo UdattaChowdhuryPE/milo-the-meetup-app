@@ -44,8 +44,6 @@ export const ParticipantRole = {
 export interface Participant {
   id: string;
   roomId: string;
-  /** @nullable */
-  browserIdentity: string | null;
   name: string;
   role: ParticipantRole;
   joinedAt: string;

@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { useLocation, Link } from 'wouter';
 import { useCreateRoom, type RoomInput } from '@workspace/api-client-react';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { saveRoomMembership } from '@/lib/room-membership';
 import '../rooms.css';
 
 type RoomFormValues = { name: string; description: string; creatorName: string };
@@ -34,7 +35,11 @@ function CreateRoom() {
       ...(values.description.trim() ? { description: values.description.trim() } : {}),
     };
     createRoom.mutate({ data }, {
-      onSuccess: (room) => setLocation(`/room/${room.id}`),
+      onSuccess: (room) => {
+        const creator = room.participants.find((person) => person.role === 'creator');
+        if (creator) saveRoomMembership(room.id, { participantId: creator.id });
+        setLocation(`/room/${room.id}`);
+      },
     });
   }
 

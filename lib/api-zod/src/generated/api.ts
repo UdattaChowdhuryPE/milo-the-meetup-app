@@ -42,7 +42,6 @@ export const CreateRoomResponse = zod.object({
   "participants": zod.array(zod.object({
   "id": zod.string().uuid(),
   "roomId": zod.string().uuid(),
-  "browserIdentity": zod.string().uuid().nullable(),
   "name": zod.string(),
   "role": zod.enum(['creator', 'member']),
   "joinedAt": zod.coerce.date()
@@ -65,7 +64,6 @@ export const GetRoomResponse = zod.object({
   "participants": zod.array(zod.object({
   "id": zod.string().uuid(),
   "roomId": zod.string().uuid(),
-  "browserIdentity": zod.string().uuid().nullable(),
   "name": zod.string(),
   "role": zod.enum(['creator', 'member']),
   "joinedAt": zod.coerce.date()
@@ -92,7 +90,6 @@ export const JoinRoomBody = zod.object({
 export const JoinRoomResponse = zod.object({
   "id": zod.string().uuid(),
   "roomId": zod.string().uuid(),
-  "browserIdentity": zod.string().uuid().nullable(),
   "name": zod.string(),
   "role": zod.enum(['creator', 'member']),
   "joinedAt": zod.coerce.date()

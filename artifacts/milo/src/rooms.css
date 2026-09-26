@@ -102,6 +102,16 @@
 .workspace-room-heading h1 { max-width: 800px; margin: 14px 0 13px; font-size: clamp(3.8rem, 6.5vw, 7.5rem); line-height: .92; overflow-wrap: anywhere; }
 .workspace-room-description { max-width: 600px; margin: 0; color: #596a70; font-size: 1rem; line-height: 1.6; overflow-wrap: anywhere; }
 .workspace-share { flex: none; margin-bottom: 6px; background: var(--peach); color: var(--ink); }
+.workspace-join {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, .75fr);
+  align-items: center; gap: 32px; margin: 0 0 30px; padding: 30px 34px;
+  border: 1px solid rgba(31,52,64,.18); background: var(--sand);
+}
+.workspace-join h2 { margin: 14px 0 10px; font: 400 clamp(2.6rem, 4vw, 4rem)/1 var(--app-font-serif); letter-spacing: -.045em; }
+.workspace-join p { max-width: 410px; margin: 0; color: #596a70; font-size: .92rem; line-height: 1.6; }
+.workspace-join-form { display: grid; align-content: center; gap: 11px; }
+.workspace-join-form .workspace-submit { margin-top: 7px; }
+.workspace-join-form .workspace-error-text { color: #a43e32; }
 .workspace-room-rule { display: flex; align-items: center; justify-content: space-between; gap: 15px; border-block: 1px solid rgba(31,52,64,.24); padding: 15px 0; }
 .workspace-participants { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .workspace-person { display: inline-flex; align-items: center; gap: 9px; font-size: .82rem; font-weight: 700; overflow-wrap: anywhere; }
@@ -140,6 +150,7 @@
   .workspace-create-intro h1 { max-width: 540px; font-size: clamp(4.1rem, 13vw, 6.7rem); }
   .workspace-intro-foot { margin-top: 48px; }
   .workspace-form-wrap { padding: 60px 36px 75px; }
+  .workspace-join { grid-template-columns: 1fr; }
   .workspace-room-grid { grid-template-columns: 1fr; }
   .workspace-side { grid-template-columns: 1fr 1fr; }
   .workspace-panel-conversation { min-height: 420px; }
@@ -158,6 +169,7 @@
   .workspace-room-heading { display: block; padding: 25px 0 30px; }
   .workspace-room-heading h1 { font-size: clamp(3.7rem, 15vw, 5.7rem); }
   .workspace-share { margin: 24px 0 0; }
+  .workspace-join { gap: 22px; padding: 24px; }
   .workspace-room-rule { align-items: start; flex-direction: column; }
   .workspace-side { grid-template-columns: 1fr; }
   .workspace-panel { min-height: 295px; padding: 24px; }

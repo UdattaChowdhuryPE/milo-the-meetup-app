@@ -174,9 +174,6 @@ components:
         roomId:
           type: string
           format: uuid
-        browserIdentity:
-          type: ["string", "null"]
-          format: uuid
         name:
           type: string
         role:
@@ -188,7 +185,6 @@ components:
       required:
         - id
         - roomId
-        - browserIdentity
         - name
         - role
         - joinedAt
